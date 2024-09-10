@@ -1,5 +1,6 @@
 from PIL import Image
 import numpy as np
+import cv2, os
 
 def convert(f:float) -> list[int,int,int]:
     if f == 0:
@@ -15,69 +16,29 @@ def flatten(line:list[list[int,int,int]]) -> list[int]:
 
     return out
 
+files = [int(f.replace("file","")) for f in os.listdir("output/raw")]
+num_files = max(files) + 1
+
 files = []
-for i in range(50):
+for i in range(num_files):
     print(f"at input file {i}")
     l = []
-    with open(f"output/file{i}","r") as f:
+    with open(f"output/raw/file{i}","r") as f:
         items = f.readlines()
         l = [x.split(",") for x in items]
         for line in l:
             line.remove("\n")
-        # files.append(l)
     l = [[convert(float(x)) for x in line] for line in l]
 
     image = Image.fromarray(np.array(l).astype(np.uint8))
-    # print(np.array(img))
-    image.save(f"img{i}.png")
-    
+    image.save(f"output/img{i}.png")
 
-
-
-# # imgs = []
-
-# # print(files)
-
-
-
-# # files = [[convert(float(x)) for x in line] for img in files for line in img]
-# files = [[[convert(float(x)) for x in line] for line in img] for img in files]
-
-# # print(files)
-
-
-# # files = [[flatten(line) for line in img] for img in files]
-
-# def flatten2(line:list[list[int]]) -> list[int]:
-#     out = []
-#     for l in line:
-#         for l2 in l:
-#             out.append(l2)
-
-#     return out
-
-# images = []
-
-# # print(files[0])
-# for (i,img) in enumerate(files):
-#     print(f"at img {i}")
-#     # image = Image.fromarray((img * 1).astype(np.uint8)).convert('RGB')
-#     image = Image.fromarray(np.array(img).astype(np.uint8))
-#     # print(np.array(img))
-#     image.save(f"img{i}.png")
-#     # images.append(image)
-
-
-
-import cv2, os
-
-images = [img for img in os.listdir(".") if img.endswith(".png")]
-
+images = ["output/"+img for img in os.listdir("./output") if img.endswith(".png")]
 
 frame = cv2.imread(images[0])
 height, width, layers = frame.shape
 
-video = cv2.VideoWriter("ani.avi", 0, 1, (width,height))
+video = cv2.VideoWriter("export.avi", 0, 1, (width,height))
 
 for (idx,image) in enumerate(images):
     print(f"at img {idx}")
@@ -85,3 +46,6 @@ for (idx,image) in enumerate(images):
     
 cv2.destroyAllWindows()
 video.release()
+
+for img in images:
+    os.remove(img)

@@ -7,7 +7,7 @@ use std::{
 use crate::{
     cell::{AtomicF64, Cell},
     writer::Writer,
-    WithCall, OUT_STEPS, SIZE, STEPS,
+    WithCall,
 };
 
 const EMPTY_OPTIONS: [Option<Arc<AtomicF64>>; 4] =
@@ -19,8 +19,11 @@ pub struct Grid<F> {
     op: WithCall<F>,
     ext: (usize, usize),
     runners: usize,
-    dimension: usize,
+    dimension: (usize, usize),
     writer: Arc<Mutex<Writer>>,
+    steps: usize,
+    output_steps: usize,
+    size: usize,
 }
 
 impl<F> Grid<F>
@@ -36,39 +39,44 @@ where
     }
 
     pub fn new(
-        dimension: usize,
+        dimension: (usize, usize),
         op: WithCall<F>,
         runners: usize,
         height: impl Fn(usize, usize) -> f64,
+        steps: usize,
+        output_steps: usize,
     ) -> Self {
-        if dimension * dimension % runners != 0 {
-            panic!("dimension x dimension must be divisible by num_runners");
+        let dimension = (dimension.1, dimension.0);
+
+        if dimension.0 * dimension.1 % runners != 0 {
+            panic!("dimension.0 x dimension.1 must be divisible by runners");
         }
+        let size = dimension.0 * dimension.1;
 
         let number_of_blocks_y = Self::compute_number_of_block_rows(runners);
         let number_of_blocks_x = runners / number_of_blocks_y;
 
-        let x_ext = dimension / number_of_blocks_x;
-        let y_ext = dimension / number_of_blocks_y;
+        let x_ext = dimension.0 / number_of_blocks_x;
+        let y_ext = dimension.1 / number_of_blocks_y;
 
-        let mut grid = Vec::with_capacity(dimension);
-        let mut gridn = Vec::with_capacity(dimension);
+        let mut grid = Vec::with_capacity(dimension.0);
+        let mut gridn = Vec::with_capacity(dimension.0);
 
-        for _ in 0..dimension {
-            grid.push(Vec::with_capacity(dimension));
+        for _ in 0..dimension.0 {
+            grid.push(Vec::with_capacity(dimension.1));
         }
-        for _ in 0..dimension {
-            gridn.push(Vec::with_capacity(dimension));
+        for _ in 0..dimension.0 {
+            gridn.push(Vec::with_capacity(dimension.1));
         }
 
         for row in gridn.iter_mut() {
-            for _ in 0..dimension {
+            for _ in 0..dimension.1 {
                 row.push(EMPTY_OPTIONS);
             }
         }
 
         for (x, row) in grid.iter_mut().enumerate() {
-            for y in 0..dimension {
+            for y in 0..dimension.1 {
                 row.push(Arc::new(AtomicF64::new(height(x, y))));
             }
         }
@@ -81,20 +89,23 @@ where
             runners,
             dimension,
             writer: Arc::new(Mutex::new(Writer::new())),
+            steps,
+            output_steps,
+            size,
         }
     }
 
     pub fn populate(&mut self) {
         const OFFSETS: [(i8, i8); 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
 
-        for i in 0..SIZE {
-            for j in 0..SIZE {
+        for i in 0..self.dimension.0 {
+            for j in 0..self.dimension.1 {
                 for (idx, offset) in OFFSETS.iter().enumerate() {
                     let nb_pos = (i as i32 + offset.0 as i32, j as i32 + offset.1 as i32);
                     let nb = if nb_pos.0 < 0
                         || nb_pos.1 < 0
-                        || nb_pos.0 >= SIZE as i32
-                        || nb_pos.1 >= SIZE as i32
+                        || nb_pos.0 >= self.dimension.0 as i32
+                        || nb_pos.1 >= self.dimension.1 as i32
                     {
                         None
                     } else {
@@ -116,19 +127,7 @@ where
             let mut running_y = 0;
             let mut counter = 0;
 
-            // let mut out_grid = vec![];
-            // let dimension = self.dimension;
-
-            // for _ in 0..self.dimension {
-            //     out_grid.push(Vec::with_capacity(self.dimension));
-            // }
-            // for (x, row) in out_grid.iter_mut().enumerate() {
-            //     for y in 0..self.dimension {
-            //         row.push(self.grid[x][y].clone());
-            //     }
-            // }
-
-            let every_n_steps = STEPS / OUT_STEPS;
+            let every_n_steps = self.steps / self.output_steps;
 
             for rank in 0..self.runners {
                 let op1 = self.op.clone();
@@ -139,6 +138,7 @@ where
                 let writer = self.writer.clone();
                 let grid = self.grid.clone();
                 let dimension = self.dimension;
+                let steps = self.steps;
 
                 for x in 0..self.ext.0 {
                     for y in 0..self.ext.1 {
@@ -154,13 +154,13 @@ where
                 }
                 running_x += self.ext.0;
 
-                if running_x >= self.dimension {
+                if running_x >= self.dimension.0 {
                     running_x = 0;
                     running_y += self.ext.1;
                 }
 
                 scope.spawn(move || {
-                    for i in 0..STEPS {
+                    for _ in 0..steps {
                         start_lock.wait();
                         for cell in cells.iter_mut() {
                             cell.run(&op1);
@@ -172,16 +172,14 @@ where
                         write_lock.wait();
                         if rank == 0 {
                             counter += 1;
-                            // println!("entered");
                             if counter == every_n_steps {
                                 counter = 0;
 
-                                // println!("output written at step {}", i);
+                                let mut out: Vec<Vec<f64>> =
+                                    vec![vec![0.0; dimension.1]; dimension.0];
 
-                                let mut out: Vec<Vec<f64>> = vec![vec![0.0; dimension]; dimension];
-
-                                for x in 0..dimension {
-                                    for y in 0..dimension {
+                                for x in 0..dimension.0 {
+                                    for y in 0..dimension.1 {
                                         out[x][y] = grid[x][y].load(Ordering::Acquire);
                                     }
                                 }
@@ -194,18 +192,6 @@ where
             }
         });
     }
-
-    // fn write(&mut self) {
-    //     let mut out: Vec<Vec<f64>> = vec![];
-
-    //     for x in 0..self.dimension {
-    //         for y in 0..self.dimension {
-    //             out[x][y] = self.grid[x][y].load(Ordering::Acquire);
-    //         }
-    //     }
-
-    //     self.writer.write(out);
-    // }
 
     pub fn print(&self) {
         for v in self.grid.iter() {

@@ -4,10 +4,6 @@ mod cell;
 mod grid;
 mod writer;
 
-const SIZE: usize = 2000;
-const STEPS: usize = 50;
-const OUT_STEPS: usize = 50;
-
 #[derive(Clone)]
 struct WithCall<F> {
     fp: F,
@@ -27,6 +23,8 @@ where
 }
 
 fn main() {
+    let size = (1, 1);
+
     let op = WithCall::new(|mut num: f64, nb: &[Option<f64>]| {
         let mut nb_n = nb.to_vec();
 
@@ -41,8 +39,8 @@ fn main() {
     });
 
     let height = |x: usize, y: usize| {
-        let dist = ((x as f64 - SIZE as f64 / 2.0) * (x as f64 - SIZE as f64 / 2.0)
-            + (y as f64 - SIZE as f64 / 2.0) * (y as f64 - SIZE as f64 / 2.0))
+        let dist = ((x as f64 - size.0 as f64 / 2.0) * (x as f64 - size.0 as f64 / 2.0)
+            + (y as f64 - size.0 as f64 / 2.0) * (y as f64 - size.0 as f64 / 2.0))
             .sqrt();
 
         if dist < 300.0 {
@@ -51,9 +49,9 @@ fn main() {
         50.0
     };
 
-    let mut grid = Grid::new(SIZE, op, 100, height);
+    let mut grid = Grid::new(size, op, 1, height, 10, 10);
 
     grid.populate();
+
     grid.calculate();
-    // grid.print();
 }
