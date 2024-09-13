@@ -1,34 +1,38 @@
 use std::{
-    mem::replace,
-    sync::{atomic::Ordering, Arc, Barrier, Mutex},
+    fmt::Debug,
+    mem::swap,
+    sync::{Arc, Barrier, Mutex},
     thread,
 };
 
-use crate::{
-    cell::{AtomicF64, Cell},
-    writer::Writer,
-    WithCall,
-};
+use crate::cell::Cell;
+use parking_lot::{RwLock, RwLockReadGuard};
 
-const EMPTY_OPTIONS: [Option<Arc<AtomicF64>>; 4] =
-    [Option::None, Option::None, Option::None, Option::None];
+use crate::{writer::Writer, WithCall};
 
-pub struct Grid<F> {
-    pub grid: Arc<Vec<Vec<Arc<AtomicF64>>>>,
-    pub nb_grid: Vec<Vec<[Option<Arc<AtomicF64>>; 4]>>,
-    op: WithCall<F>,
+pub struct Grid<F, T>
+where
+    T: Clone,
+{
+    pub grid: Arc<Vec<Vec<Arc<RwLock<T>>>>>,
+    pub nb_grid: Vec<Vec<Vec<Option<Arc<RwLock<T>>>>>>,
+    op: WithCall<F, T>,
     ext: (usize, usize),
     runners: usize,
     dimension: (usize, usize),
     writer: Arc<Mutex<Writer>>,
     steps: usize,
     output_steps: usize,
-    size: usize,
+    neighbours: Vec<(i8, i8)>,
 }
 
-impl<F> Grid<F>
+impl<F, T> Grid<F, T>
 where
-    F: Fn(f64, &[Option<f64>]) -> f64 + Clone + std::marker::Send + Copy,
+    F: Fn(RwLockReadGuard<T>, &Vec<Option<RwLockReadGuard<T>>>) -> T
+        + Clone
+        + std::marker::Send
+        + Copy,
+    T: Clone + Default + Debug + std::marker::Send + std::marker::Sync,
 {
     fn compute_number_of_block_rows(number_of_processes: usize) -> usize {
         let mut number_of_rows = (number_of_processes as f32).sqrt() as usize;
@@ -40,18 +44,20 @@ where
 
     pub fn new(
         dimension: (usize, usize),
-        op: WithCall<F>,
+        op: WithCall<F, T>,
         runners: usize,
-        height: impl Fn(usize, usize) -> f64,
+        height: impl Fn(usize, usize) -> T,
         steps: usize,
         output_steps: usize,
+        mut neighbours: Vec<(i8, i8)>,
     ) -> Self {
+        neighbours.iter_mut().for_each(|(x, y)| swap(x, y));
+
         let dimension = (dimension.1, dimension.0);
 
         if dimension.0 * dimension.1 % runners != 0 {
             panic!("dimension.0 x dimension.1 must be divisible by runners");
         }
-        let size = dimension.0 * dimension.1;
 
         let number_of_blocks_y = Self::compute_number_of_block_rows(runners);
         let number_of_blocks_x = runners / number_of_blocks_y;
@@ -71,17 +77,17 @@ where
 
         for row in gridn.iter_mut() {
             for _ in 0..dimension.1 {
-                row.push(EMPTY_OPTIONS);
+                row.push(Vec::with_capacity(neighbours.len()));
             }
         }
 
         for (x, row) in grid.iter_mut().enumerate() {
             for y in 0..dimension.1 {
-                row.push(Arc::new(AtomicF64::new(height(x, y))));
+                row.push(Arc::new(RwLock::new(height(x, y))));
             }
         }
 
-        Self {
+        let mut s = Self {
             grid: Arc::new(grid),
             nb_grid: gridn,
             op,
@@ -91,16 +97,19 @@ where
             writer: Arc::new(Mutex::new(Writer::new())),
             steps,
             output_steps,
-            size,
-        }
+            neighbours,
+        };
+
+        s.populate();
+
+        s
     }
 
     pub fn populate(&mut self) {
-        const OFFSETS: [(i8, i8); 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
-
         for i in 0..self.dimension.0 {
             for j in 0..self.dimension.1 {
-                for (idx, offset) in OFFSETS.iter().enumerate() {
+                let mut arr = Vec::with_capacity(self.neighbours.len());
+                for offset in self.neighbours.iter() {
                     let nb_pos = (i as i32 + offset.0 as i32, j as i32 + offset.1 as i32);
                     let nb = if nb_pos.0 < 0
                         || nb_pos.1 < 0
@@ -111,8 +120,9 @@ where
                     } else {
                         Option::from((self.grid[nb_pos.0 as usize][nb_pos.1 as usize]).clone())
                     };
-                    self.nb_grid[i][j][idx] = nb;
+                    arr.push(nb);
                 }
+                self.nb_grid[i][j] = arr;
             }
         }
     }
@@ -134,7 +144,7 @@ where
                 let start_lock = start_lock.clone();
                 let sync_lock = sync_lock.clone();
                 let write_lock = write_lock.clone();
-                let mut cells: Vec<Cell> = vec![];
+                let mut cells: Vec<Cell<T>> = vec![];
                 let writer = self.writer.clone();
                 let grid = self.grid.clone();
                 let dimension = self.dimension;
@@ -144,11 +154,10 @@ where
                     for y in 0..self.ext.1 {
                         cells.push(Cell {
                             value: self.grid[running_x + x][running_y + y].clone(),
-                            neighbours: replace(
+                            neighbours: std::mem::take(
                                 &mut self.nb_grid[running_x + x][running_y + y],
-                                EMPTY_OPTIONS,
                             ),
-                            next_val: 0.0,
+                            next_val: T::default(),
                         });
                     }
                 }
@@ -175,12 +184,12 @@ where
                             if counter == every_n_steps {
                                 counter = 0;
 
-                                let mut out: Vec<Vec<f64>> =
-                                    vec![vec![0.0; dimension.1]; dimension.0];
+                                let mut out: Vec<Vec<String>> =
+                                    vec![vec![String::with_capacity(10); dimension.1]; dimension.0];
 
                                 for x in 0..dimension.0 {
                                     for y in 0..dimension.1 {
-                                        out[x][y] = grid[x][y].load(Ordering::Acquire);
+                                        out[x][y] = format!("{:?}", grid[x][y].read());
                                     }
                                 }
 
@@ -196,7 +205,7 @@ where
     pub fn print(&self) {
         for v in self.grid.iter() {
             for c in v {
-                print!("{}, ", c.load(Ordering::Acquire));
+                print!("{:?}, ", c.read());
             }
             println!();
         }

@@ -19,7 +19,7 @@ impl Writer {
         Self { path, idx: 0 }
     }
 
-    pub fn write(&mut self, data: Vec<Vec<f64>>) {
+    pub fn write(&mut self, data: Vec<Vec<String>>) {
         let mut out = "".to_string();
         for line in data {
             for n in line {
