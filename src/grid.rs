@@ -1,14 +1,13 @@
 use std::{
     fmt::Debug,
     mem::swap,
-    sync::{Arc, Barrier, Mutex},
+    sync::{Arc, Barrier},
     thread,
 };
 
-use crate::cell::Cell;
-use parking_lot::{RwLock, RwLockReadGuard};
+use parking_lot::{Mutex, RwLock, RwLockReadGuard};
 
-use crate::{writer::Writer, WithCall};
+use crate::{cell::Cell, withcall::WithCall, writer::Writer, IslOutput, OutputType};
 
 pub struct Grid<F, T>
 where
@@ -24,6 +23,8 @@ where
     steps: usize,
     output_steps: usize,
     neighbours: Vec<(i8, i8)>,
+    output_data: Arc<Mutex<IslOutput<T>>>,
+    output_type: OutputType,
 }
 
 impl<F, T> Grid<F, T>
@@ -50,6 +51,7 @@ where
         steps: usize,
         output_steps: usize,
         mut neighbours: Vec<(i8, i8)>,
+        output_type: OutputType,
     ) -> Self {
         neighbours.iter_mut().for_each(|(x, y)| swap(x, y));
 
@@ -87,6 +89,11 @@ where
             }
         }
 
+        let output = match output_type {
+            OutputType::RawData => IslOutput::RawData(Vec::with_capacity(output_steps)),
+            OutputType::String => IslOutput::String(Vec::with_capacity(output_steps)),
+        };
+
         let mut s = Self {
             grid: Arc::new(grid),
             nb_grid: gridn,
@@ -98,6 +105,8 @@ where
             steps,
             output_steps,
             neighbours,
+            output_data: Arc::new(Mutex::new(output)),
+            output_type,
         };
 
         s.populate();
@@ -127,7 +136,7 @@ where
         }
     }
 
-    pub fn calculate(&mut self) {
+    pub fn calculate(&mut self) -> IslOutput<T> {
         let sync_lock = Arc::new(Barrier::new(self.runners));
         let start_lock = Arc::new(Barrier::new(self.runners));
         let write_lock = Arc::new(Barrier::new(self.runners));
@@ -144,6 +153,7 @@ where
                 let start_lock = start_lock.clone();
                 let sync_lock = sync_lock.clone();
                 let write_lock = write_lock.clone();
+                let output = self.output_data.clone();
                 let mut cells: Vec<Cell<T>> = vec![];
                 let writer = self.writer.clone();
                 let grid = self.grid.clone();
@@ -184,22 +194,42 @@ where
                             if counter == every_n_steps {
                                 counter = 0;
 
-                                let mut out: Vec<Vec<String>> =
-                                    vec![vec![String::with_capacity(10); dimension.1]; dimension.0];
-
-                                for x in 0..dimension.0 {
-                                    for y in 0..dimension.1 {
-                                        out[x][y] = format!("{:?}", grid[x][y].read());
+                                match &mut *output.lock() {
+                                    IslOutput::RawData(vec) => {
+                                        let mut out: Vec<Vec<T>> =
+                                            vec![vec![T::default(); dimension.1]; dimension.0];
+                                        for x in 0..dimension.0 {
+                                            for y in 0..dimension.1 {
+                                                out[x][y] = grid[x][y].read().clone();
+                                            }
+                                        }
+                                        vec.push(out);
+                                    }
+                                    IslOutput::String(vec) => {
+                                        let mut out: Vec<Vec<String>> = vec![
+                                                vec![String::with_capacity(10); dimension.1];
+                                                dimension.0
+                                            ];
+                                        for x in 0..dimension.0 {
+                                            for y in 0..dimension.1 {
+                                                out[x][y] = format!("{:?}", grid[x][y].read());
+                                            }
+                                        }
+                                        let data = Self::concat(out);
+                                        vec.push(data);
                                     }
                                 }
-
-                                writer.lock().unwrap().write(out);
                             }
                         }
                     }
                 });
             }
         });
+        let mut l_output = self.output_data.lock();
+
+        let o = std::mem::replace(&mut *l_output, IslOutput::String(vec![]));
+
+        return o;
     }
 
     pub fn print(&self) {
@@ -209,5 +239,17 @@ where
             }
             println!();
         }
+    }
+
+    fn concat(data: Vec<Vec<String>>) -> String {
+        let mut out = "".to_string();
+        for line in data {
+            let joined = line.join(",");
+
+            out += &joined;
+            out += "\n";
+        }
+
+        out
     }
 }

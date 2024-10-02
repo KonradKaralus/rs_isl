@@ -8,13 +8,13 @@ pub struct Writer {
 impl Writer {
     pub fn new() -> Self {
         let path = "output/raw".to_string();
-        let _ = fs::create_dir(Path::new(&path));
+        // let _ = fs::create_dir(Path::new(&path));
 
-        let files = fs::read_dir(&path).unwrap();
+        // let files = fs::read_dir(&path).unwrap();
 
-        for file in files {
-            let _ = fs::remove_file(file.unwrap().path());
-        }
+        // for file in files {
+        //     let _ = fs::remove_file(file.unwrap().path());
+        // }
 
         Self { path, idx: 0 }
     }

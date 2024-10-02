@@ -5,4 +5,7 @@ edition = "2021"
 
 [dependencies]
 parking_lot = { version = "0.12.3", features = ["hardware-lock-elision"] }
-rand = "0.8.5"
+
+[lib]
+name = "isl"
+path = "src/lib.rs"
