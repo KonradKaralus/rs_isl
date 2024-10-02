@@ -85,7 +85,7 @@ where
 
         for (x, row) in grid.iter_mut().enumerate() {
             for y in 0..dimension.1 {
-                row.push(Arc::new(RwLock::new(height(x, y))));
+                row.push(Arc::new(RwLock::new(height(y, x))));
             }
         }
 
