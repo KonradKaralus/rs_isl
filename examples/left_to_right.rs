@@ -31,12 +31,12 @@ fn main() {
         4,
         4,
         neighbours,
-        isl::OutputType::String,
+        rs_isl::OutputType::String,
     ));
 
     match data {
-        isl::IslOutput::RawData(vec) => println!("{:?}", vec),
-        isl::IslOutput::String(vec) => {
+        rs_isl::IslOutput::RawData(vec) => println!("{:?}", vec),
+        rs_isl::IslOutput::String(vec) => {
             for line in vec {
                 println!("{}", line)
             }

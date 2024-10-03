@@ -7,7 +7,6 @@ use withcall::WithCall;
 mod cell;
 mod grid;
 mod withcall;
-mod writer;
 
 pub enum OutputType {
     RawData,
