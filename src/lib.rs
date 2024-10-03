@@ -92,5 +92,5 @@ where
         options.output_type,
     );
 
-    return grid.calculate();
+    grid.calculate()
 }

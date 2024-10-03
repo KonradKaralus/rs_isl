@@ -9,12 +9,14 @@ use parking_lot::{Mutex, RwLock, RwLockReadGuard};
 
 use crate::{cell::Cell, withcall::WithCall, IslOutput, OutputType};
 
+type NeighbourGrid<T> = Vec<Vec<Vec<Option<Arc<RwLock<T>>>>>>;
+
 pub struct Grid<F, T>
 where
     T: Clone,
 {
     pub grid: Arc<Vec<Vec<Arc<RwLock<T>>>>>,
-    pub nb_grid: Vec<Vec<Vec<Option<Arc<RwLock<T>>>>>>,
+    pub nb_grid: NeighbourGrid<T>,
     op: WithCall<F, T>,
     ext: (usize, usize),
     runners: usize,
@@ -23,7 +25,6 @@ where
     output_steps: usize,
     neighbours: Vec<(i8, i8)>,
     output_data: Arc<Mutex<IslOutput<T>>>,
-    output_type: OutputType,
 }
 
 impl<F, T> Grid<F, T>
@@ -104,7 +105,6 @@ where
             output_steps,
             neighbours,
             output_data: Arc::new(Mutex::new(output)),
-            output_type,
         };
 
         s.populate();
@@ -224,18 +224,7 @@ where
         });
         let mut l_output = self.output_data.lock();
 
-        let o = std::mem::replace(&mut *l_output, IslOutput::String(vec![]));
-
-        return o;
-    }
-
-    pub fn print(&self) {
-        for v in self.grid.iter() {
-            for c in v {
-                print!("{:?}, ", c.read());
-            }
-            println!();
-        }
+        std::mem::replace(&mut *l_output, IslOutput::String(vec![]))
     }
 
     fn concat(data: Vec<Vec<String>>) -> String {
