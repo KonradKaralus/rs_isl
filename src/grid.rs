@@ -1,5 +1,5 @@
 use std::{
-    fmt::Debug,
+    fmt::{self, Debug},
     mem::swap,
     sync::{Arc, Barrier},
     thread,
@@ -52,13 +52,13 @@ where
         output_steps: usize,
         mut neighbours: Vec<(i8, i8)>,
         output_type: OutputType,
-    ) -> Self {
+    ) -> Result<Self, InvalidThreadNumber> {
         neighbours.iter_mut().for_each(|(x, y)| swap(x, y));
 
         let dimension = (dimension.1, dimension.0);
 
         if dimension.0 * dimension.1 % runners != 0 {
-            panic!("dimension.0 x dimension.1 must be divisible by runners");
+            return Err(InvalidThreadNumber {});
         }
 
         let number_of_blocks_y = Self::compute_number_of_block_rows(runners);
@@ -109,7 +109,7 @@ where
 
         s.populate();
 
-        s
+        Ok(s)
     }
 
     pub fn populate(&mut self) {
@@ -237,5 +237,17 @@ where
         }
 
         out
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct InvalidThreadNumber();
+
+impl fmt::Display for InvalidThreadNumber {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Size of domain (x*y) was not divisible by the number of threads"
+        )
     }
 }

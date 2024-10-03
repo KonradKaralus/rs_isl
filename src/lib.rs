@@ -31,7 +31,7 @@
 //!     }
 //!     0.0
 //! };
-//! 
+//!
 //! // closure that determines each cell's initial value based on it's position
 //! let init = |x: usize, y: usize| {
 //!     // return 1.0 if the cell is located on the left boundary of the grid
@@ -41,7 +41,7 @@
 //!     0.0
 //! };
 //!
-//! 
+//!
 //! // create parameters and run the simulation
 //! let data = run_isl(IslParams::new(
 //!     size,
@@ -58,11 +58,11 @@
 //!     rs_isl::OutputType::String,
 //! ));
 //! ```
-//!
+//! TODO: newest version of lefttoright
 
 use std::fmt::Debug;
 
-use grid::Grid;
+use grid::{Grid, InvalidThreadNumber};
 use parking_lot::RwLockReadGuard;
 use withcall::WithCall;
 
@@ -70,11 +70,21 @@ mod cell;
 mod grid;
 mod withcall;
 
+/// Defines the output type
 pub enum OutputType {
+    /// Returns a vec with the raw values of the entire grid at each output step.
     RawData,
+    /// Returns a vec with values gathered by calling [std::fmt::Debug] on each cell.
+    ///
+    /// The values will be separated by commas and each x line of the 2d array will be written to a new line.
+    ///
+    /// This can be useful if you want to serialize your data or if you don't need all of your cell data in the output.
+    ///
+    /// Implement [std::fmt::Debug] accordingly.
     String,
 }
 
+/// See [OutputType] for information on the different types of output.
 #[derive(PartialEq)]
 pub enum IslOutput<T> {
     RawData(Vec<Vec<Vec<T>>>),
@@ -90,14 +100,14 @@ where
         + Copy,
     H: Fn(usize, usize) -> T,
 {
-    dimension: (usize, usize),
-    op: F,
-    runners: usize,
-    height: H,
-    steps: usize,
-    output_steps: usize,
-    neighbours: Vec<(i8, i8)>,
-    output_type: OutputType,
+    pub dimension: (usize, usize),
+    pub op: F,
+    pub runners: usize,
+    pub height: H,
+    pub steps: usize,
+    pub output_steps: usize,
+    pub neighbours: Vec<(i8, i8)>,
+    pub output_type: OutputType,
 }
 
 impl<T, F, H> IslParams<T, F, H>
@@ -109,11 +119,22 @@ where
         + Copy,
     H: Fn(usize, usize) -> T,
 {
+    /// Set parameters for running an ISL
+    ///
+    /// * `dimension` - size of 2d-array, (x,y).
+    /// * `operation` - the operation calculating each cell's new value.
+    /// * `runners` - number of threads used for running the ISL.
+    /// * `init` - closure, from which each cell's initial value will be calculated.
+    /// * `steps` - number of iterations.
+    /// * `output_steps` - number of output files returned.
+    /// * `neighbours` - definition of each cells neighbours, represented by their offsets.
+    /// * `output_type` - whether to return raw data or formatted strings.
+    ///
     pub fn new(
         dimension: (usize, usize),
-        op: F,
+        operation: F,
         runners: usize,
-        height: H,
+        init: H,
         steps: usize,
         output_steps: usize,
         neighbours: Vec<(i8, i8)>,
@@ -121,9 +142,9 @@ where
     ) -> Self {
         Self {
             dimension,
-            op,
+            op: operation,
             runners,
-            height,
+            height: init,
             steps,
             output_steps,
             neighbours,
@@ -131,14 +152,12 @@ where
         }
     }
 }
+/// Runs the ISL and returns the output data
 ///
+/// # Errors
 ///
-///
-///
-///
-///
-///
-pub fn run_isl<T, F, H>(options: IslParams<T, F, H>) -> IslOutput<T>
+/// If the given array size (x*y) is not divisible by the number of runners, an error will be returned.
+pub fn run_isl<T, F, H>(options: IslParams<T, F, H>) -> Result<IslOutput<T>, InvalidThreadNumber>
 where
     T: Clone + Default + Debug + std::marker::Sync + std::marker::Send,
     F: Fn(RwLockReadGuard<T>, &Vec<Option<RwLockReadGuard<T>>>) -> T
@@ -149,7 +168,7 @@ where
 {
     let op = WithCall::new(options.op);
 
-    let mut grid = Grid::new(
+    let r_grid = Grid::new(
         options.dimension,
         op,
         options.runners,
@@ -160,5 +179,8 @@ where
         options.output_type,
     );
 
-    grid.calculate()
+    match r_grid {
+        Ok(mut grid) => return Ok(grid.calculate()),
+        Err(_) => return Err(InvalidThreadNumber()),
+    }
 }
