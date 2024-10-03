@@ -1,4 +1,2 @@
 /target
-/output/raw
-*.png
-*.avi
+Cargo.lock

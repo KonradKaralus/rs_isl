@@ -1,11 +1,18 @@
 [package]
-name = "isl"
+name = "rs_isl"
 version = "0.1.0"
+license = "MIT OR Apache-2.0"
+authors = ["Konrad Karalus <g78285423@gmail.com>"]
+description = "2-dimensional generic Iterative Stencil Loops"
+repository = "https://github.com/KonradKaralus/rs_isl"
+keywords = ["ISL", "Iterative Stencil Loops", "simulation"]
+categories = ["simulation"]
 edition = "2021"
+readme = "README.md"
 
 [dependencies]
 parking_lot = { version = "0.12.3", features = ["hardware-lock-elision"] }
 
 [lib]
-name = "isl"
+name = "rs_isl"
 path = "src/lib.rs"

@@ -7,7 +7,7 @@ use std::{
 
 use parking_lot::{Mutex, RwLock, RwLockReadGuard};
 
-use crate::{cell::Cell, withcall::WithCall, writer::Writer, IslOutput, OutputType};
+use crate::{cell::Cell, withcall::WithCall, IslOutput, OutputType};
 
 pub struct Grid<F, T>
 where
@@ -19,7 +19,6 @@ where
     ext: (usize, usize),
     runners: usize,
     dimension: (usize, usize),
-    writer: Arc<Mutex<Writer>>,
     steps: usize,
     output_steps: usize,
     neighbours: Vec<(i8, i8)>,
@@ -101,7 +100,6 @@ where
             ext: (x_ext, y_ext),
             runners,
             dimension,
-            writer: Arc::new(Mutex::new(Writer::new())),
             steps,
             output_steps,
             neighbours,
@@ -155,7 +153,6 @@ where
                 let write_lock = write_lock.clone();
                 let output = self.output_data.clone();
                 let mut cells: Vec<Cell<T>> = vec![];
-                let writer = self.writer.clone();
                 let grid = self.grid.clone();
                 let dimension = self.dimension;
                 let steps = self.steps;

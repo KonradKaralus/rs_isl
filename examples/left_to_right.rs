@@ -1,4 +1,4 @@
-use isl::{run_isl, IslParams};
+use rs_isl::{run_isl, IslParams};
 use parking_lot::RwLockReadGuard;
 
 fn main() {
