@@ -9,6 +9,9 @@ keywords = ["ISL", "Stencil", "Loop", "Simulation"]
 categories = ["simulation"]
 edition = "2021"
 readme = "README.md"
+exclude = [
+    "doc"
+]
 
 [dependencies]
 parking_lot = { version = "0.12.3", features = ["hardware-lock-elision"] }
