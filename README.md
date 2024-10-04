@@ -1,5 +1,11 @@
 # rs_isl
 
+[![Crates.io Version](https://img.shields.io/crates/v/rs_isl)](https://crates.io/crates/rs_isl)
+[![docs.rs page](https://docs.rs/rs_isl/badge.svg)](https://docs.rs/rs_isl)
+[![Crates.io Downloads](https://img.shields.io/crates/d/rs_isl)](https://crates.io/crates/rs_isl)
+[![Crates.io License](https://img.shields.io/crates/l/rs_isl)](https://crates.io/crates/rs_isl)
+[![CI](https://github.com/KonradKaralus/rs_isl/workflows/Rust/badge.svg)](https://github.com/KonradKaralus/rs_isl/actions)
+
 rs_isl is an implementation of Iterative Stencil Loops in Rust.
 ISLs can be used in a variety of scenarios such as image processing, fluid simulation and the calculation of PDEs.
 For more information see [Wikipedia](https://wikipedia.org/wiki/Iterative_Stencil_Loops).
