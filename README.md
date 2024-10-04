@@ -14,7 +14,7 @@ This animation was created with the [rs_isl Visualizer](https://github.com/Konra
 
 ## Usage
 
-```
+```rust
 use rs_isl::{run_isl, IslParams};
 
 // grid with a size of 4x2, where cells only access their left neighbour
