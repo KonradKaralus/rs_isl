@@ -10,7 +10,8 @@ categories = ["simulation"]
 edition = "2021"
 readme = "README.md"
 exclude = [
-    "doc"
+    "doc",
+    "README.md"
 ]
 
 [dependencies]
