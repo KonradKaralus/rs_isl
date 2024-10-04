@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use parking_lot::RwLockReadGuard;
     use rs_isl::{run_isl, IslParams};
 
     #[test]
@@ -8,11 +7,10 @@ mod tests {
         let size = (4, 1);
         let neighbours = vec![(-1, 0)];
 
-        let op = |_num: RwLockReadGuard<f64>, nb: &Vec<Option<RwLockReadGuard<f64>>>| {
+        let op = |_num: &f64, nb: Vec<Option<&f64>>| {
             if nb.first().unwrap().is_some() {
-                let f = **nb[0].as_ref().unwrap();
-
-                if f != 0.0 {
+                let f = nb[0].unwrap();
+                if *f != 0.0 {
                     return 1.0;
                 }
             }
@@ -56,7 +54,7 @@ mod tests {
 
     #[test]
     fn wrong_thread_number_errors() {
-        let op = |_num: RwLockReadGuard<f64>, _nb: &Vec<Option<RwLockReadGuard<f64>>>| 0.0;
+        let op = |_num: &f64, _nb: Vec<Option<&f64>>| 0.0;
         let init = |_x: usize, _y: usize| 0.0;
 
         let params = IslParams::new(
