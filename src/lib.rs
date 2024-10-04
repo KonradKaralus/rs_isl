@@ -16,6 +16,10 @@
 //! An example which creates a wave-like motion from left to right through the grid.
 //!
 //! ```rust, no_run
+//! use parking_lot::RwLockReadGuard;
+//! use rs_isl::IslParams;
+//! use rs_isl::run_isl;
+//! 
 //! // grid with a size of 4x2, where cells only access their left neighbour
 //! let size = (4, 2);
 //! let neighbours = vec![(-1, 0)];
