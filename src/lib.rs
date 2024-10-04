@@ -23,7 +23,7 @@
 //! // closure that calculates the new value based on the cell's own value and it's neighbours
 //! let op = |_num: RwLockReadGuard<f64>, nb: &Vec<Option<RwLockReadGuard<f64>>>| {
 //!     if nb.first().unwrap().is_some() {
-//!       let f = **nb[0].as_ref().unwrap();
+//!         let f = **nb[0].as_ref().unwrap();
 //!         // if the cell's neighbours has the value 1.0, we take that, otherwise we return 0.0
 //!         if f != 0.0 {
 //!             return 1.0;
@@ -33,7 +33,7 @@
 //! };
 //!
 //! // closure that determines each cell's initial value based on it's position
-//! let init = |x: usize, y: usize| {
+//! let init = |x: usize, _y: usize| {
 //!     // return 1.0 if the cell is located on the left boundary of the grid
 //!     if x == 0 {
 //!         return 1.0;
@@ -41,9 +41,8 @@
 //!     0.0
 //! };
 //!
-//!
-//! // create parameters and run the simulation
-//! let data = run_isl(IslParams::new(
+//! // create parameters
+//! let params = IslParams::new(
 //!     size,
 //!     op,
 //!     // number of threads, the grids size (x*y) must be divisible by this value
@@ -56,9 +55,21 @@
 //!     neighbours,
 //!     // type of returned data
 //!     rs_isl::OutputType::String,
-//! ));
+//! );
+//!
+//! // run ISL
+//! let data = run_isl(params);
+//!
+//! // extract the data
+//! match data.unwrap() {
+//!     rs_isl::IslOutput::RawData(vec) => println!("{:?}", vec),
+//!     rs_isl::IslOutput::String(vec) => {
+//!         for line in vec {
+//!             println!("{}", line)
+//!         }
+//!     }
+//! }
 //! ```
-//! TODO: newest version of lefttoright
 
 use std::fmt::Debug;
 
@@ -121,14 +132,14 @@ where
 {
     /// Set parameters for running an ISL
     ///
-    /// * `dimension` - size of 2d-array, (x,y).
-    /// * `operation` - the operation calculating each cell's new value.
-    /// * `runners` - number of threads used for running the ISL.
-    /// * `init` - closure, from which each cell's initial value will be calculated.
-    /// * `steps` - number of iterations.
-    /// * `output_steps` - number of output files returned.
-    /// * `neighbours` - definition of each cells neighbours, represented by their offsets.
-    /// * `output_type` - whether to return raw data or formatted strings.
+    /// * `dimension` - The size of the 2d-array, (x,y).
+    /// * `operation` - The operation calculating each cell's new value.
+    /// * `runners` - Number of threads used for running the ISL.
+    /// * `init` - The closure, from which each cell's initial value will be calculated.
+    /// * `steps` - Number of iterations.
+    /// * `output_steps` - Number of output files returned.
+    /// * `neighbours` - Definition of each cells neighbours, represented by their offsets.
+    /// * `output_type` - Whether to return raw data or formatted strings.
     ///
     pub fn new(
         dimension: (usize, usize),
@@ -153,6 +164,8 @@ where
     }
 }
 /// Runs the ISL and returns the output data
+///
+/// For more information see crate level documentation and [IslParams::new]
 ///
 /// # Errors
 ///
