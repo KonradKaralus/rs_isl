@@ -19,7 +19,7 @@
 //! use parking_lot::RwLockReadGuard;
 //! use rs_isl::IslParams;
 //! use rs_isl::run_isl;
-//! 
+//!
 //! // grid with a size of 4x2, where cells only access their left neighbour
 //! let size = (4, 2);
 //! let neighbours = vec![(-1, 0)];
@@ -78,7 +78,6 @@
 use std::fmt::Debug;
 
 use grid::{Grid, InvalidThreadNumber};
-use parking_lot::RwLockReadGuard;
 use withcall::WithCall;
 
 mod cell;
@@ -109,10 +108,7 @@ pub enum IslOutput<T> {
 pub struct IslParams<T, F, H>
 where
     T: Clone + Default + Debug + std::marker::Sync + std::marker::Send,
-    F: Fn(RwLockReadGuard<T>, &Vec<Option<RwLockReadGuard<T>>>) -> T
-        + Clone
-        + std::marker::Send
-        + Copy,
+    F: Fn(&T, Vec<Option<&T>>) -> T + Clone + std::marker::Send + Copy,
     H: Fn(usize, usize) -> T,
 {
     pub dimension: (usize, usize),
@@ -128,10 +124,7 @@ where
 impl<T, F, H> IslParams<T, F, H>
 where
     T: Clone + Default + Debug + std::marker::Sync + std::marker::Send,
-    F: Fn(RwLockReadGuard<T>, &Vec<Option<RwLockReadGuard<T>>>) -> T
-        + Clone
-        + std::marker::Send
-        + Copy,
+    F: Fn(&T, Vec<Option<&T>>) -> T + Clone + std::marker::Send + Copy,
     H: Fn(usize, usize) -> T,
 {
     /// Set parameters for running an ISL
@@ -177,10 +170,7 @@ where
 pub fn run_isl<T, F, H>(options: IslParams<T, F, H>) -> Result<IslOutput<T>, InvalidThreadNumber>
 where
     T: Clone + Default + Debug + std::marker::Sync + std::marker::Send,
-    F: Fn(RwLockReadGuard<T>, &Vec<Option<RwLockReadGuard<T>>>) -> T
-        + Clone
-        + std::marker::Send
-        + Copy,
+    F: Fn(&T, Vec<Option<&T>>) -> T + Clone + std::marker::Send + Copy,
     H: Fn(usize, usize) -> T,
 {
     let op = WithCall::new(options.op);

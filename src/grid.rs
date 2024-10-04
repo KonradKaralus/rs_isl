@@ -29,10 +29,7 @@ where
 
 impl<F, T> Grid<F, T>
 where
-    F: Fn(RwLockReadGuard<T>, &Vec<Option<RwLockReadGuard<T>>>) -> T
-        + Clone
-        + std::marker::Send
-        + Copy,
+    F: Fn(&T, Vec<Option<&T>>) -> T + Clone + std::marker::Send + Copy,
     T: Clone + Default + Debug + std::marker::Send + std::marker::Sync,
 {
     fn compute_number_of_block_rows(number_of_processes: usize) -> usize {

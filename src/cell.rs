@@ -20,23 +20,31 @@ where
 {
     pub fn run<F>(&mut self, op: &WithCall<F, T>)
     where
-        F: Fn(RwLockReadGuard<T>, &Vec<Option<RwLockReadGuard<T>>>) -> T,
+        F: Fn(&T, Vec<Option<&T>>) -> T,
         T: Debug,
     {
-        let nb_n = self
-            .neighbours
-            .iter()
-            .map(|f| {
-                if f.is_none() {
-                    None
-                } else {
-                    let n = f.as_ref().unwrap();
-                    Option::from(n.read())
-                }
-            })
-            .collect::<Vec<Option<RwLockReadGuard<T>>>>();
+        let mut locks = vec![];
+        let mut nbs = vec![];
 
-        self.next_val = op.run(self.value.read(), &nb_n);
+        let own_lock = self.value.read();
+        let own_ref = &*own_lock;
+
+        self.neighbours.iter().for_each(|f| {
+            if f.is_none() {
+                locks.push(None);
+            } else {
+                let n = f.as_ref().unwrap();
+                let n_val = n.read();
+                locks.push(Option::from(n_val));
+            }
+        });
+
+        for lock in &locks {
+            let inner = lock.as_deref();
+            nbs.push(inner);
+        }
+
+        self.next_val = op.run(own_ref, nbs);
     }
 
     pub fn write(&mut self) {

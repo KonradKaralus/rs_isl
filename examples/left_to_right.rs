@@ -1,4 +1,3 @@
-use parking_lot::RwLockReadGuard;
 use rs_isl::{run_isl, IslParams};
 
 fn main() {
@@ -7,12 +6,11 @@ fn main() {
     let neighbours = vec![(-1, 0)];
 
     // closure that calculates the new value based on the cell's own value and it's neighbours
-    let op = |_num: RwLockReadGuard<f64>, nb: &Vec<Option<RwLockReadGuard<f64>>>| {
+    let op = |_num: &f64, nb: Vec<Option<&f64>>| {
         if nb.first().unwrap().is_some() {
-            let f = **nb[0].as_ref().unwrap();
-
-            // if the cell's neighbours has the value 1.0, we take that, otherwise we return 0.0
-            if f != 0.0 {
+            let f = nb[0].unwrap();
+            // if the cell's neighbour has the value 1.0, we take that, otherwise we return 0.0
+            if *f != 0.0 {
                 return 1.0;
             }
         }

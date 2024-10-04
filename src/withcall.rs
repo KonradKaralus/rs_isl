@@ -12,7 +12,7 @@ where
 
 impl<F, T> WithCall<F, T>
 where
-    F: Fn(RwLockReadGuard<T>, &Vec<Option<RwLockReadGuard<T>>>) -> T,
+    F: Fn(&T, Vec<Option<&T>>) -> T,
     T: Clone,
 {
     pub fn new(fp: F) -> Self {
@@ -22,7 +22,7 @@ where
         }
     }
 
-    pub fn run(&self, a: RwLockReadGuard<T>, b: &Vec<Option<RwLockReadGuard<T>>>) -> T {
+    pub fn run(&self, a: &T, b: Vec<Option<&T>>) -> T {
         (self.fp)(a, b)
     }
 }
