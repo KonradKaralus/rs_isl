@@ -1,5 +1,3 @@
-use parking_lot::RwLockReadGuard;
-
 #[derive(Clone)]
 pub struct WithCall<F, T>
 where

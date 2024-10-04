@@ -5,7 +5,7 @@ use std::{
     thread,
 };
 
-use parking_lot::{Mutex, RwLock, RwLockReadGuard};
+use parking_lot::{Mutex, RwLock};
 
 use crate::{cell::Cell, withcall::WithCall, IslOutput, OutputType};
 

@@ -1,6 +1,6 @@
 use std::{fmt::Debug, mem::swap, sync::Arc};
 
-use parking_lot::{RwLock, RwLockReadGuard};
+use parking_lot::RwLock;
 
 use crate::withcall::WithCall;
 

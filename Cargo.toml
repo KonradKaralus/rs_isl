@@ -1,6 +1,6 @@
 [package]
 name = "rs_isl"
-version = "0.1.1"
+version = "0.1.2"
 license = "MIT OR Apache-2.0"
 authors = ["Konrad Karalus <g78285423@gmail.com>"]
 description = "2-dimensional generic Iterative Stencil Loops"
