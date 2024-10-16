@@ -26,7 +26,7 @@ impl VtkWriter {
         for x in 0..dim.0 {
             for y in 0..dim.1 {
                 points.append(&mut vec![y as f32, x as f32, 0f32]);
-                out_data.push(data[x as usize][y as usize].clone());
+                out_data.push(data[x as usize][y as usize]);
             }
         }
 

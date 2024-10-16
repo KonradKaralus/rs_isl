@@ -31,8 +31,8 @@ where
 impl<F, T> Grid<F, T>
 where
     F: Fn(&T, Vec<Option<&T>>) -> T + Clone + std::marker::Send + Copy,
-    T: Clone + Default + Debug + std::marker::Send + std::marker::Sync,
-    f32: From<T>,
+    T: Clone + Default + Debug + std::marker::Send + std::marker::Sync + Into<f32>,
+    // f32: From<T>,
 {
     fn compute_number_of_block_rows(number_of_processes: usize) -> usize {
         let mut number_of_rows = (number_of_processes as f32).sqrt() as usize;
