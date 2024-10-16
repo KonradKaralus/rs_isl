@@ -26,12 +26,13 @@ where
     neighbours: Vec<(i8, i8)>,
     output_data: Arc<Mutex<IslOutput<T>>>,
     vtk_writer: Arc<Mutex<Option<VtkWriter>>>,
+    some_val: T
 }
 
 impl<F, T> Grid<F, T>
 where
     F: Fn(&T, Vec<Option<&T>>) -> T + Clone + std::marker::Send + Copy,
-    T: Clone + Default + Debug + std::marker::Send + std::marker::Sync + Into<f32>,
+    T: Clone + Debug + std::marker::Send + std::marker::Sync + Into<f32>,
     // f32: From<T>,
 {
     fn compute_number_of_block_rows(number_of_processes: usize) -> usize {
@@ -112,6 +113,7 @@ where
             neighbours,
             output_data: Arc::new(Mutex::new(output)),
             vtk_writer: Arc::new(Mutex::new(writer)),
+            some_val: height(0,0)
         };
 
         s.populate();
@@ -164,6 +166,7 @@ where
                 let dimension = self.dimension;
                 let steps = self.steps;
                 let writer = self.vtk_writer.clone();
+                let some_val = self.some_val.clone();
 
                 for x in 0..self.ext.0 {
                     for y in 0..self.ext.1 {
@@ -172,7 +175,7 @@ where
                             neighbours: std::mem::take(
                                 &mut self.nb_grid[running_x + x][running_y + y],
                             ),
-                            next_val: T::default(),
+                            next_val: some_val.clone(),
                         });
                     }
                 }
@@ -202,7 +205,7 @@ where
                                 match &mut *output.lock() {
                                     IslOutput::RawData(vec) => {
                                         let mut out: Vec<Vec<T>> =
-                                            vec![vec![T::default(); dimension.1]; dimension.0];
+                                            vec![vec![some_val.clone(); dimension.1]; dimension.0];
                                         for x in 0..dimension.0 {
                                             for y in 0..dimension.1 {
                                                 out[x][y] = grid[x][y].read().clone();

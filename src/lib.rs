@@ -108,7 +108,7 @@ pub enum IslOutput<T> {
 
 pub struct IslParams<T, F, H>
 where
-    T: Clone + Default + Debug + std::marker::Sync + std::marker::Send,
+    T: Clone + Debug + std::marker::Sync + std::marker::Send,
     F: Fn(&T, Vec<Option<&T>>) -> T + Clone + std::marker::Send + Copy,
     H: Fn(usize, usize) -> T,
 {
@@ -124,7 +124,7 @@ where
 
 impl<T, F, H> IslParams<T, F, H>
 where
-    T: Clone + Default + Debug + std::marker::Sync + std::marker::Send,
+    T: Clone + Debug + std::marker::Sync + std::marker::Send,
     F: Fn(&T, Vec<Option<&T>>) -> T + Clone + std::marker::Send + Copy,
     H: Fn(usize, usize) -> T,
 {
@@ -170,7 +170,7 @@ where
 /// If the given array size (x*y) is not divisible by the number of runners, an error will be returned.
 pub fn run_isl<T, F, H>(options: IslParams<T, F, H>) -> Result<IslOutput<T>, InvalidThreadNumber>
 where
-    T: Clone + Default + Debug + std::marker::Sync + std::marker::Send + Into<f32>,
+    T: Clone + Debug + std::marker::Sync + std::marker::Send + Into<f32>,
     F: Fn(&T, Vec<Option<&T>>) -> T + Clone + std::marker::Send + Copy,
     H: Fn(usize, usize) -> T,
     // f32: From<T>
