@@ -73,7 +73,7 @@
 //!     }
 //! }
 
-use std::fmt::Debug;
+use std::{fmt::Debug, path::PathBuf};
 
 use grid::{Grid, InvalidThreadNumber};
 use withcall::WithCall;
@@ -81,6 +81,7 @@ use withcall::WithCall;
 mod cell;
 mod grid;
 mod withcall;
+mod vtk_writer;
 
 /// Defines the output type
 pub enum OutputType {
@@ -94,6 +95,7 @@ pub enum OutputType {
     ///
     /// Implement [std::fmt::Debug] accordingly.
     String,
+    VTK(PathBuf)
 }
 
 /// See [OutputType] for information on the different types of output.
@@ -101,6 +103,7 @@ pub enum OutputType {
 pub enum IslOutput<T> {
     RawData(Vec<Vec<Vec<T>>>),
     String(Vec<String>),
+    VTK
 }
 
 pub struct IslParams<T, F, H>
@@ -170,6 +173,7 @@ where
     T: Clone + Default + Debug + std::marker::Sync + std::marker::Send,
     F: Fn(&T, Vec<Option<&T>>) -> T + Clone + std::marker::Send + Copy,
     H: Fn(usize, usize) -> T,
+    f32: From<T>
 {
     let op = WithCall::new(options.op);
 

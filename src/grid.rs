@@ -7,7 +7,7 @@ use std::{
 
 use parking_lot::{Mutex, RwLock};
 
-use crate::{cell::Cell, withcall::WithCall, IslOutput, OutputType};
+use crate::{cell::Cell, vtk_writer::VtkWriter, withcall::WithCall, IslOutput, OutputType};
 
 type NeighbourGrid<T> = Vec<Vec<Vec<Option<Arc<RwLock<T>>>>>>;
 
@@ -25,12 +25,14 @@ where
     output_steps: usize,
     neighbours: Vec<(i8, i8)>,
     output_data: Arc<Mutex<IslOutput<T>>>,
+    vtk_writer: Arc<Mutex<Option<VtkWriter>>>,
 }
 
 impl<F, T> Grid<F, T>
 where
     F: Fn(&T, Vec<Option<&T>>) -> T + Clone + std::marker::Send + Copy,
     T: Clone + Default + Debug + std::marker::Send + std::marker::Sync,
+    f32: From<T>,
 {
     fn compute_number_of_block_rows(number_of_processes: usize) -> usize {
         let mut number_of_rows = (number_of_processes as f32).sqrt() as usize;
@@ -89,6 +91,13 @@ where
         let output = match output_type {
             OutputType::RawData => IslOutput::RawData(Vec::with_capacity(output_steps)),
             OutputType::String => IslOutput::String(Vec::with_capacity(output_steps)),
+            OutputType::VTK(_) => IslOutput::VTK,
+        };
+
+        let writer = match output_type {
+            OutputType::RawData => None,
+            OutputType::String => None,
+            OutputType::VTK(pb) => Some(VtkWriter::new(pb)),
         };
 
         let mut s = Self {
@@ -102,6 +111,7 @@ where
             output_steps,
             neighbours,
             output_data: Arc::new(Mutex::new(output)),
+            vtk_writer: Arc::new(Mutex::new(writer)),
         };
 
         s.populate();
@@ -153,6 +163,7 @@ where
                 let grid = self.grid.clone();
                 let dimension = self.dimension;
                 let steps = self.steps;
+                let writer = self.vtk_writer.clone();
 
                 for x in 0..self.ext.0 {
                     for y in 0..self.ext.1 {
@@ -211,6 +222,19 @@ where
                                         }
                                         let data = Self::concat(out);
                                         vec.push(data);
+                                    }
+                                    IslOutput::VTK => {
+                                        let mut out: Vec<Vec<f32>> =
+                                            vec![vec![0.0; dimension.1]; dimension.0];
+                                        for x in 0..dimension.0 {
+                                            for y in 0..dimension.1 {
+                                                out[x][y] = grid[x][y].read().clone().into();
+                                            }
+                                        }
+                                        {
+                                            let w = &mut *writer.lock();
+                                            w.as_mut().unwrap().write_step(out);
+                                        }
                                     }
                                 }
                             }
