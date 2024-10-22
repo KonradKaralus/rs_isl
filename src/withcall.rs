@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 #[derive(Clone)]
 pub struct WithCall<F, T>
 where
@@ -5,7 +7,7 @@ where
 {
     // TODO fix this, this does not need clone
     fp: F,
-    _type: Option<T>, //this is a hacky workaround to make the below impl block work
+    r_type: PhantomData<T>, //this is a hacky workaround to make the below impl block work
 }
 
 impl<F, T> WithCall<F, T>
@@ -16,7 +18,7 @@ where
     pub fn new(fp: F) -> Self {
         WithCall {
             fp,
-            _type: Option::None,
+            r_type: PhantomData,
         }
     }
 

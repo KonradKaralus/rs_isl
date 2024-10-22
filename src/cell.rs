@@ -1,14 +1,11 @@
-use std::{fmt::Debug, mem::swap, sync::Arc};
+use std::{mem::swap, sync::Arc};
 
 use parking_lot::RwLock;
 
 use crate::withcall::WithCall;
 
 #[derive(Clone)]
-pub struct Cell<T>
-where
-    T: Clone,
-{
+pub struct Cell<T> {
     pub value: Arc<RwLock<T>>,
     pub neighbours: Vec<Option<Arc<RwLock<T>>>>,
     pub next_val: T,
@@ -21,7 +18,6 @@ where
     pub fn run<F>(&mut self, op: &WithCall<F, T>)
     where
         F: Fn(&T, Vec<Option<&T>>) -> T,
-        T: Debug,
     {
         let mut locks = vec![];
         let mut nbs = vec![];

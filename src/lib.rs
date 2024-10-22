@@ -1,115 +1,103 @@
-//! ## rs_isl
-//! Implementation of Iterative Stencil Loops
-//!
-//! Runs a simulation over a 2-dimensional array
-//! specified by the given parameters.
-//!
-//! ### Features:
-//! - generic array elements
-//! - parallelization using threads
-//! - custom definition of neighbouring elements
-//!
-//! For further information on ISLs see: https://wikipedia.org/wiki/Iterative_Stencil_Loops
-//!
-//! ## Usage
-//!  
-//! An example which creates a wave-like motion from left to right through the grid.
-//!
-//! ```rust, no_run
-//! use rs_isl::IslParams;
-//! use rs_isl::run_isl;
-//!
-//! // grid with a size of 4x2, where cells only access their left neighbour
-//! let size = (4, 2);
-//! let neighbours = vec![(-1, 0)];
-//!
-//! // closure that calculates the new value based on the cell's own value and it's neighbours
-//! let op = |_num: &f64, nb: Vec<Option<&f64>>| {
-//!     if nb.first().unwrap().is_some() {
-//!         let f = nb[0].unwrap();
-//!         // if the cell's neighbour has the value 1.0, we take that, otherwise we return 0.0
-//!         if *f != 0.0 {
-//!             return 1.0;
-//!         }
-//!     }
-//!     0.0
-//! };
-//!
-//! // closure that determines each cell's initial value based on it's position
-//! let init = |x: usize, _y: usize| {
-//!     // return 1.0 if the cell is located on the left boundary of the grid
-//!     if x == 0 {
-//!         return 1.0;
-//!     }
-//!     0.0
-//! };
-//!
-//! // create parameters
-//! let params = IslParams::new(
-//!     size,
-//!     op,
-//!     // number of threads, the grids size (x*y) must be divisible by this value
-//!     1,
-//!     init,
-//!     // number of steps for which the simulation will be run
-//!     4,
-//!     // number of output steps, these will be evenly distributed through the simulation
-//!     4,
-//!     neighbours,
-//!     // type of returned data
-//!     rs_isl::OutputType::String,
-//! );
-//!
-//! // run ISL
-//! let data = run_isl(params);
-//!
-//! // extract the data
-//! match data.unwrap() {
-//!     rs_isl::IslOutput::RawData(vec) => println!("{:?}", vec),
-//!     rs_isl::IslOutput::String(vec) => {
-//!         for line in vec {
-//!             println!("{}", line)
-//!         }
-//!     }
-//! }
-
-use std::{fmt::Debug, path::PathBuf};
+// ! ## rs_isl
+// ! Implementation of Iterative Stencil Loops
+// !
+// ! Runs a simulation over a 2-dimensional array
+// ! specified by the given parameters.
+// !
+// ! ### Features:
+// ! - generic array elements
+// ! - parallelization using threads
+// ! - custom definition of neighbouring elements
+// !
+// ! For further information on ISLs see: https://wikipedia.org/wiki/Iterative_Stencil_Loops
+// !
+// ! ## Usage
+// !  
+// ! An example which creates a wave-like motion from left to right through the grid.
+// !
+// ! ```rust, no_run
+// ! use core::f64;
+// ! use std::{cmp::max, path::PathBuf};
+// !
+// ! use rs_isl::*;
+// !
+// !
+// ! fn main() {
+// !     // create a domain with a size of 200 by 100
+// !     let dim = (200, 100)
+// !     // we only access the left neighbour of every cell
+// !     let neighbours = vec![(-1, 0)];
+// !
+// !     // take neighbours value, if there is no neighbour decrease by 3
+// !     let op = |num: &f32, nb: Vec<Option<&f32>>| {
+// !         if nb.first().unwrap().is_some() {
+// !             let f = *nb[0].unwrap();
+// !             return f;
+// !         }
+// !         return max(*num as i32 - 3, 0) as f32;
+// !     };
+// !
+// !     // creates a sine shape at the left boundary of the domain
+// !     let init = |x: usize, _y: usize| {
+// !         if x < DIM.0 / 10 {
+// !             let fac = x as f64 / (DIM.0 / 10) as f64 * f64::consts::FRAC_PI_2;
+// !             return (250.0 - 250.0 * fac.sin()) as f32;
+// !         }
+// !         0.0
+// !     };
+// !
+// !     // create the simulation parameters
+// !     let params = IslParams::new(
+// !         dim,
+// !         op,
+// !         // number of threads for simulation, the domain size must be divisible by this number
+// !         10,
+// !         init,
+// !         // number of simulation steps
+// !         200,
+// !         // number of output steps
+// !         100,
+// !         neighbours,
+// !         // path for writing vtk files
+// !         PathBuf::from("raw"),
+// !     );
+// !
+// !     // run the simulation
+// !     run_isl(params).unwrap();
+// ! }
+// ! ```
 
 use grid::{Grid, InvalidThreadNumber};
+use std::path::PathBuf;
 use withcall::WithCall;
 
 mod cell;
 mod grid;
-mod withcall;
 mod vtk_writer;
+mod withcall;
 
-/// Defines the output type
-pub enum OutputType {
-    /// Returns a vec with the raw values of the entire grid at each output step.
-    RawData,
-    /// Returns a vec with values gathered by calling [std::fmt::Debug] on each cell.
-    ///
-    /// The values will be separated by commas and each x line of the 2d array will be written to a new line.
-    ///
-    /// This can be useful if you want to serialize your data or if you don't need all of your cell data in the output.
-    ///
-    /// Implement [std::fmt::Debug] accordingly.
-    String,
-    VTK(PathBuf)
+pub trait VtkOutput {
+    fn value_names() -> Vec<String>;
+    fn cellvalue(&self) -> Vec<f32>;
 }
 
-/// See [OutputType] for information on the different types of output.
-#[derive(PartialEq)]
-pub enum IslOutput<T> {
-    RawData(Vec<Vec<Vec<T>>>),
-    String(Vec<String>),
-    VTK
+impl<T> VtkOutput for T
+where
+    T: Into<f32> + Clone,
+{
+    fn cellvalue(&self) -> Vec<f32> {
+        vec![(*self).clone().into()]
+    }
+
+    fn value_names() -> Vec<String> {
+        vec!["val:".to_string()]
+    }
 }
 
 pub struct IslParams<T, F, H>
 where
-    T: Clone + Debug + std::marker::Sync + std::marker::Send,
-    F: Fn(&T, Vec<Option<&T>>) -> T + Clone + std::marker::Send + Copy,
+    T: Clone + Sync + Send,
+    F: Fn(&T, Vec<Option<&T>>) -> T + Clone + Send + Copy,
     H: Fn(usize, usize) -> T,
 {
     pub dimension: (usize, usize),
@@ -119,13 +107,13 @@ where
     pub steps: usize,
     pub output_steps: usize,
     pub neighbours: Vec<(i8, i8)>,
-    pub output_type: OutputType,
+    pub output_path: PathBuf,
 }
 
 impl<T, F, H> IslParams<T, F, H>
 where
-    T: Clone + Debug + std::marker::Sync + std::marker::Send,
-    F: Fn(&T, Vec<Option<&T>>) -> T + Clone + std::marker::Send + Copy,
+    T: Clone + Sync + Send,
+    F: Fn(&T, Vec<Option<&T>>) -> T + Clone + Send + Copy,
     H: Fn(usize, usize) -> T,
 {
     /// Set parameters for running an ISL
@@ -147,7 +135,7 @@ where
         steps: usize,
         output_steps: usize,
         neighbours: Vec<(i8, i8)>,
-        output_type: OutputType,
+        output_path: PathBuf,
     ) -> Self {
         Self {
             dimension,
@@ -157,7 +145,7 @@ where
             steps,
             output_steps,
             neighbours,
-            output_type,
+            output_path,
         }
     }
 }
@@ -168,12 +156,11 @@ where
 /// # Errors
 ///
 /// If the given array size (x*y) is not divisible by the number of runners, an error will be returned.
-pub fn run_isl<T, F, H>(options: IslParams<T, F, H>) -> Result<IslOutput<T>, InvalidThreadNumber>
+pub fn run_isl<T, F, H>(options: IslParams<T, F, H>) -> Result<(), InvalidThreadNumber>
 where
-    T: Clone + Debug + std::marker::Sync + std::marker::Send + Into<f32>,
-    F: Fn(&T, Vec<Option<&T>>) -> T + Clone + std::marker::Send + Copy,
+    T: Clone + Sync + Send + VtkOutput,
+    F: Fn(&T, Vec<Option<&T>>) -> T + Clone + Send + Copy,
     H: Fn(usize, usize) -> T,
-    // f32: From<T>
 {
     let op = WithCall::new(options.op);
 
@@ -185,7 +172,7 @@ where
         options.steps,
         options.output_steps,
         options.neighbours,
-        options.output_type,
+        options.output_path,
     );
 
     match r_grid {
