@@ -8,7 +8,6 @@ repository = "https://github.com/KonradKaralus/rs_isl"
 keywords = ["ISL", "Stencil", "Loop", "Simulation"]
 categories = ["simulation"]
 edition = "2021"
-readme = "README.md"
 exclude = [
     "doc",
     "README.md"
