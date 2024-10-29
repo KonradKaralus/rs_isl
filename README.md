@@ -12,67 +12,56 @@ For more information see [Wikipedia](https://wikipedia.org/wiki/Iterative_Stenci
 
 ## Example
 
-This animation was created with the [rs_isl Visualizer](https://github.com/KonradKaralus/rs_isl-Visualizer) from the data created by the example [left_to_right_wave](examples/left_to_right_wave.rs).
+This animation was created with [Paraview](https://www.paraview.org/) from the data created by the example [two_waves](examples/two_waves.rs).
 
 <p align="center">
-  <img src="doc/left_to_right.gif">
+  <img src="doc/two_waves.gif">
 </p>
 
 ## Usage
 
 ```rust
-use rs_isl::{run_isl, IslParams};
+use core::f64;
+use std::{cmp::max, path::PathBuf};
+use rs_isl::*;
 
-// grid with a size of 4x2, where cells only access their left neighbour
-let size = (4, 2);
-let neighbours = vec![(-1, 0)];
-
-// closure that calculates the new value based on the cell's own value and it's neighbours
-let op = |_num: &f64, nb: Vec<Option<&f64>>| {
-    if nb.first().unwrap().is_some() {
-        let f = nb[0].unwrap();
-        // if the cell's neighbour has the value 1.0, we take that, otherwise we return 0.0
-        if *f != 0.0 {
-            return 1.0;
+fn main() {
+    // create a domain with a size of 200 by 100
+    let dim = (200, 100)
+    // we only access the left neighbour of every cell
+    let neighbours = vec![(-1, 0)];
+    // take neighbours value, if there is no neighbour decrease by 3
+    let op = |num: &f32, nb: Vec<Option<&f32>>| {
+        if nb.first().unwrap().is_some() {
+            let f = *nb[0].unwrap();
+            return f;
         }
-    }
-    0.0
-};
-// closure that determines each cell's initial value based on it's position
-let init = |x: usize, _y: usize| {
-    // return 1.0 if the cell is located on the left boundary of the grid
-    if x == 0 {
-        return 1.0;
-    }
-    0.0
-};
-
-// create parameters
-let params = IslParams::new(
-    size,
-    op,
-    // number of threads, the grids size (x*y) must be divisible by this value
-    1,
-    init,
-    // number of steps for which the simulation will be run
-    4,
-    // number of output steps, these will be evenly distributed through the simulation
-    4,
-    neighbours,
-    // type of returned data
-    rs_isl::OutputType::String,
-);
-
-// run ISL
-let data = run_isl(params);
-
-// extract the data
-match data.unwrap() {
-    rs_isl::IslOutput::RawData(vec) => println!("{:?}", vec),
-    rs_isl::IslOutput::String(vec) => {
-        for line in vec {
-            println!("{}", line)
+        return max(*num as i32 - 3, 0) as f32;
+    };
+    // creates a sine shape at the left boundary of the domain
+    let init = |x: usize, _y: usize| {
+        if x < DIM.0 / 10 {
+            let fac = x as f64 / (DIM.0 / 10) as f64 * f64::consts::FRAC_PI_2;
+            return (250.0 - 250.0 * fac.sin()) as f32;
         }
-    }
+        0.0
+    };
+    // create the simulation parameters
+    let params = IslParams::new(
+        dim,
+        op,
+        // number of threads for simulation, the domain size must be divisible by this number
+        10,
+        init,
+        // number of simulation steps
+        200,
+        // number of output steps
+        100,
+        neighbours,
+        // path for writing vtk files
+        PathBuf::from("raw"),
+    );
+    // run the simulation
+    run_isl(params).unwrap();
 }
 ```
