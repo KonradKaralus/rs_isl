@@ -4,8 +4,7 @@ use vtkio::{
     model::{
         Attribute, Attributes, DataArray, DataSet, ElementType, Extent, StructuredGridPiece,
         Version,
-    },
-    Vtk,
+    }, Vtk
 };
 
 use crate::VtkOutput;
@@ -68,7 +67,7 @@ where
         let out = Vtk {
             version: Version::new((1, 0)),
             byte_order: vtkio::model::ByteOrder::BigEndian,
-            title: String::from("output"),
+            title: String::from("rs_isl_Output"),
             file_path: None,
             data: DataSet::inline(StructuredGridPiece {
                 extent: Extent::Dims([dim.1, dim.0, 1]),
@@ -83,8 +82,7 @@ where
         let mut out_path = self.path.clone();
         out_path.push(format!("ISL{:?}.vtk", self.idx));
 
-        out.export_ascii(out_path).unwrap();
-
+        out.export(out_path).unwrap();
         self.idx += 1;
     }
 }

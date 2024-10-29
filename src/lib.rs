@@ -12,7 +12,7 @@
 // ! For further information on ISLs see: https://wikipedia.org/wiki/Iterative_Stencil_Loops
 // !
 // ! ## Usage
-// !  
+// !
 // ! An example which creates a wave-like motion from left to right through the grid.
 // !
 // ! ```rust, no_run
@@ -76,8 +76,31 @@ mod grid;
 mod vtk_writer;
 mod withcall;
 
+/// Trait for defining the output of every cell.
+///
+/// Implement for your Data Type to write your data into the output file
+///
+/// # Example
+/// ```rust, no_run
+/// struct Point {
+///     x: u32,
+///     y: u32,
+/// }
+/// 
+/// impl VtkOutput for Point {
+///     fn value_names() -> Vec<String> {
+///         vec!["x_coord".into(), "y_coord".into()]
+///     }
+///     fn cellvalue(&self) -> Vec<f32> {
+///         vec![self.x as f32, self.y as f32]
+///     }
+/// }
+/// ```
 pub trait VtkOutput {
+    /// Names for the DataArrays created with the values of every cell
     fn value_names() -> Vec<String>;
+
+    /// Values for every cell, these will be written to the DataArrays, identified by their name
     fn cellvalue(&self) -> Vec<f32>;
 }
 
