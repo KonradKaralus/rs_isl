@@ -86,7 +86,7 @@ mod withcall;
 ///     x: u32,
 ///     y: u32,
 /// }
-/// 
+///
 /// impl VtkOutput for Point {
 ///     fn value_names() -> Vec<String> {
 ///         vec!["x_coord".into(), "y_coord".into()]
@@ -199,7 +199,7 @@ where
     );
 
     match r_grid {
-        Ok(mut grid) => return Ok(grid.calculate()),
-        Err(_) => return Err(InvalidThreadNumber()),
+        Ok(mut grid) => Ok(grid.calculate()),
+        Err(_) => Err(InvalidThreadNumber()),
     }
 }
