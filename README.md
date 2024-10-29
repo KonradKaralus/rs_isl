@@ -10,6 +10,12 @@ rs_isl is an implementation of Iterative Stencil Loops in Rust.
 ISLs can be used in a variety of scenarios such as image processing, fluid simulation and the calculation of PDEs.
 For more information see [Wikipedia](https://wikipedia.org/wiki/Iterative_Stencil_Loops).
 
+## Output
+
+rs_isl writes [.vtk](https://vtk.org/) output files to a specified path. Their contents may be defined by the user.
+
+To create those files rs_isl uses the [vtkio](https://github.com/elrnv/vtkio) crate.
+
 ## Example
 
 This animation was created with [Paraview](https://www.paraview.org/) from the data created by the example [two_waves](examples/two_waves.rs).
@@ -19,6 +25,8 @@ This animation was created with [Paraview](https://www.paraview.org/) from the d
 </p>
 
 ## Usage
+
+### General
 
 ```rust
 use core::f64;
@@ -63,5 +71,25 @@ fn main() {
     );
     // run the simulation
     run_isl(params).unwrap();
+}
+```
+
+### Setting output values for a custom data type
+
+```rust
+struct Point {
+    x: u32,
+    y: u32,
+}
+
+impl VtkOutput for Point {
+    fn value_names() -> Vec<String> {
+        // define the names of the DataArrays
+        vec!["x_coord".into(), "y_coord".into()]
+    }
+    fn cellvalue(&self) -> Vec<f32> {
+        // write the values for every cell
+        vec![self.x as f32, self.y as f32]
+    }
 }
 ```
