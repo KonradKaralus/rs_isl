@@ -10,12 +10,6 @@ rs_isl is an implementation of Iterative Stencil Loops in Rust.
 ISLs can be used in a variety of scenarios such as image processing, fluid simulation and the calculation of PDEs.
 For more information see [Wikipedia](https://wikipedia.org/wiki/Iterative_Stencil_Loops).
 
-## Output
-
-rs_isl writes [.vtk](https://vtk.org/) output files to a specified path. Their contents may be defined by the user.
-
-To create those files rs_isl uses the [vtkio](https://github.com/elrnv/vtkio) crate.
-
 ## Example
 
 This animation was created with [Paraview](https://www.paraview.org/) from the data created by the example [two_waves](examples/two_waves.rs).
@@ -23,6 +17,12 @@ This animation was created with [Paraview](https://www.paraview.org/) from the d
 <p align="center">
   <img src="doc/two_waves.gif">
 </p>
+
+## Output
+
+rs_isl writes [.vtk](https://vtk.org/) output files to a specified path. Their contents may be defined by the user.
+
+To create those files rs_isl uses the [vtkio](https://github.com/elrnv/vtkio) crate.
 
 ## Usage
 

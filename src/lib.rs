@@ -4,7 +4,7 @@
 // ! Runs a simulation over a 2-dimensional array
 // ! specified by the given parameters.
 // !
-// ! ### Features:
+// ! ## Features:
 // ! - generic array elements
 // ! - parallelization using threads
 // ! - custom definition of neighbouring elements
