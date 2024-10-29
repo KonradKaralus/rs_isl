@@ -82,6 +82,9 @@ mod withcall;
 ///
 /// # Example
 /// ```rust, no_run
+/// 
+/// use rs_isl::*;
+/// 
 /// struct Point {
 ///     x: u32,
 ///     y: u32,
