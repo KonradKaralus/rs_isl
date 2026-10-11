@@ -9,12 +9,16 @@ fn main() {
     // we only access the left neighbour of every cell
     let neighbours = vec![(-1, 0)];
 
-    // take neighbours value, if there is no neighbour decrease by 3
-    let op = |num: &f32, nb: Vec<Option<&f32>>| {
-        if nb.first().unwrap().is_some() {
-            let f = *nb[0].unwrap();
-            return f;
+    // This is the operation which is being run for every cell.
+    // The cell's value and a vector of the values of its neighbours are provided.
+    let op = |num: &f32, neighbours: Vec<Option<&f32>>| {
+        let neighbour = neighbours.first().unwrap();
+        // take neighbours value, if there is no neighbour decrease by 3
+
+        if let Some(val) = neighbour {
+            return **val;
         }
+
         return max(*num as i32 - 3, 0) as f32;
     };
 

@@ -31,21 +31,28 @@ To create those files rs_isl uses the [vtkio](https://github.com/elrnv/vtkio) cr
 ```rust
 use core::f64;
 use std::{cmp::max, path::PathBuf};
+
 use rs_isl::*;
 
+const DIM: (usize, usize) = (100, 50);
+
 fn main() {
-    // create a domain with a size of 200 by 100
-    let dim = (200, 100)
     // we only access the left neighbour of every cell
     let neighbours = vec![(-1, 0)];
-    // take neighbours value, if there is no neighbour decrease by 3
-    let op = |num: &f32, nb: Vec<Option<&f32>>| {
-        if nb.first().unwrap().is_some() {
-            let f = *nb[0].unwrap();
-            return f;
+
+    // This is the operation which is being run for every cell.
+    // The cell's value and a vector of the values of its neighbours are provided.
+    let op = |num: &f32, neighbours: Vec<Option<&f32>>| {
+        let neighbour = neighbours.first().unwrap();
+        // take neighbours value, if there is no neighbour decrease by 3
+
+        if let Some(val) = neighbour {
+            return **val;
         }
+
         return max(*num as i32 - 3, 0) as f32;
     };
+
     // creates a sine shape at the left boundary of the domain
     let init = |x: usize, _y: usize| {
         if x < DIM.0 / 10 {
@@ -54,24 +61,27 @@ fn main() {
         }
         0.0
     };
+
     // create the simulation parameters
     let params = IslParams::new(
-        dim,
+        DIM,
         op,
         // number of threads for simulation, the domain size must be divisible by this number
-        10,
+        100,
         init,
         // number of simulation steps
-        200,
+        DIM.0,
         // number of output steps
-        100,
+        DIM.0,
         neighbours,
         // path for writing vtk files
         PathBuf::from("raw"),
     );
+
     // run the simulation
     run_isl(params).unwrap();
 }
+
 ```
 
 ### Setting output values for a custom data type
